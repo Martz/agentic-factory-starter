@@ -23,7 +23,16 @@ You need a GitHub account with Copilot, and the [GitHub CLI](https://cli.github.
 4. Add the label **`factory`**. A spec comment with testable acceptance criteria appears in a couple of minutes. Read it.
 5. Happy with it? Add the label **`build`**. A draft pull request appears, with an evidence table that maps each criterion to the test that proves it.
 
-Then CI runs the gates and the review station posts an independent review. This happens automatically if you set the optional `GH_AW_CI_TRIGGER_TOKEN` during setup; otherwise click **Ready for review** on the draft PR. Read the evidence and the review, then merge. Or don't.
+Then CI runs the gates and the review station posts an independent review. With the optional `GH_AW_CI_TRIGGER_TOKEN` this starts by itself. Without it, GitHub holds the checks on a bot-opened PR until a maintainer acts: click **Ready for review** on the draft PR and both start. Read the evidence and the review, then merge. Or don't.
+
+**What a run looks like.** On 22 Oct 2026, [issue #1](https://github.com/Martz/agentic-factory-starter/issues/1) ("Split the bill evenly") became [PR #3](https://github.com/Martz/agentic-factory-starter/pull/3). It's left open, unmerged, as a reference run.
+
+| Station | Time | Usage (AI credits, from the run footer) | Result |
+|---|---|---|---|
+| Spec | 5 min 23 s | 12.2 | 7 testable criteria, including edge cases the ticket didn't mention |
+| Build | 5 min | 17.4 | 4 files, 6 new tests, an evidence table mapping each criterion to a test |
+| Gates (CI) | under 1 min | n/a | test · compile · `tests_kept`: pass |
+| Review | about 4 min (agent 1.6 min) | 1.0 | all 7 criteria met, "ready for a human to merge" |
 
 ## The stations
 
@@ -45,6 +54,7 @@ The builder uses a Claude Sonnet model and the reviewer a GPT-5 model, both thro
 - **Writes are *safe outputs*.** The agent can only *ask* for the outputs a workflow allows (a comment, labels, one PR), up to the limits you set. A separate job with write permission validates and applies them, after an automatic threat-detection job has scanned them for prompt injection, leaked secrets and malicious code. The build agent's commits arrive as a git bundle, and that separate job opens the PR. Drafts are enforced by policy.
 - **Protected files.** A PR from an agent can't change dependency manifests or agent instruction files such as `AGENTS.md`. That's why `learn` *proposes* rules in an issue and a human edits the guide.
 - **Untrusted input is fenced.** Only people with write access can trigger the stations, because labels are the trigger. In public repositories, content from untrusted authors is filtered out of the agent's context (`min-integrity: approved`).
+- **Code decides what the agent reads.** A small deterministic job before each station fetches exactly its context: the ticket a maintainer labelled, the spec written by the factory's own spec station, the PR diff. Other people's comments on the thread never reach the agent.
 - **Nothing merges itself.** The review can't approve, and the factory has no merge permission. You merge.
 
 ## Change it
@@ -57,6 +67,12 @@ The `.md` files are the source; the `.lock.yml` files are generated GitHub Actio
 - **More stations:** browse [githubnext/agentics](https://github.com/githubnext/agentics), e.g. `gh aw add-wizard githubnext/agentics/ci-doctor`.
 - **Other ingress:** `repository_dispatch` lets Jira, PagerDuty or any HTTP caller start a workflow ([triggers](https://github.github.com/gh-aw/reference/triggers/)).
 - **Watch it:** `gh aw logs`, `gh aw audit <run>` and `gh aw health` show what each station did and what it cost.
+
+## Known issues (gh-aw is in preview)
+
+- **A station "reported no action".** Run `gh aw audit <run-id>`; it shows the agent's reasoning and anything the integrity filter removed. The stations get their ticket and spec from the context jobs above. That's partly a workaround for [gh-aw#70242](https://github.com/github/gh-aw/issues/70242), where issue bodies can be labelled untrusted at runtime, and it doesn't lower `min-integrity`.
+- **A run fails after the agent succeeded, with `safe_outputs` "abandoned" or cancelled.** The publishing job didn't get a runner. `gh run rerun <run-id> --failed` publishes the saved result without running the agent again.
+- **Checks waiting on the factory's PR.** See step 5: add `GH_AW_CI_TRIGGER_TOKEN`, or click **Ready for review**.
 
 ## Cost and limits
 
