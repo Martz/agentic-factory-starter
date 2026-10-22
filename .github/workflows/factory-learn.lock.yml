@@ -54,7 +54,7 @@
 name: "Learn station"
 on:
   schedule:
-    - cron: "38 18 * * 1"  # Friendly format: weekly (scattered)
+    - cron: "23 14 * * 3"  # Friendly format: weekly (scattered)
   workflow_dispatch:
     inputs:
       aw_context:
