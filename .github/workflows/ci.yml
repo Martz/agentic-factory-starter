@@ -1,0 +1,30 @@
+# The gates: deterministic checks the agents cannot skip. They run on every pull request, including the
+# factory's (see README: agent-opened PRs need GH_AW_CI_TRIGGER_TOKEN, or "Ready for review", to start CI).
+name: ci
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: test
+        run: python -m unittest discover -s tests -v
+      - name: compile
+        run: python -m compileall -q lunchbox
+      - name: tests_kept
+        if: github.event_name == 'pull_request'
+        run: python .github/scripts/tests_kept.py "${{ github.event.pull_request.base.sha }}"
