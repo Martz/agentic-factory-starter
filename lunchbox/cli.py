@@ -21,9 +21,9 @@ def load(path: Path) -> Order:
     return order
 
 
-def render(order: Order) -> str:
+def render(order: Order, even: bool = False) -> str:
     lines = [f"{'person':<12}{'owes':>8}"]
-    for person, amount in order.per_person().items():
+    for person, amount in (order.split_evenly() if even else order.per_person()).items():
         lines.append(f"{person:<12}{amount:>8}")
     lines.append(f"{'TOTAL':<12}{order.total():>8}")
     return "\n".join(lines)
@@ -32,8 +32,9 @@ def render(order: Order) -> str:
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="lunchbox", description="Split a group lunch order.")
     ap.add_argument("order", type=Path, help="CSV file: person,item,price[,tags]")
+    ap.add_argument("--split-evenly", action="store_true", help="split the total equally instead of by item")
     args = ap.parse_args(argv)
-    print(render(load(args.order)))
+    print(render(load(args.order), even=args.split_evenly))
     return 0
 
 
