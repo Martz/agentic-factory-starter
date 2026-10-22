@@ -49,7 +49,7 @@ jobs:
             for n in $(gh pr list --repo "$REPO" --label factory --state all --search "updated:>=$since" --limit 20 --json number --jq '.[].number'); do
               gh pr view "$n" --repo "$REPO" --json number,title,state,mergedAt,url \
                 --jq '"## PR #\(.number): \(.title)\n\(.url) · \(.state)\(if .mergedAt then " (merged)" else "" end)"'
-              gh pr checks "$n" --repo "$REPO" 2>/dev/null | head -10 | sed 's/^/- check: /' || true
+              gh pr checks "$n" --repo "$REPO" 2>/dev/null | awk -F'\t' '$1 == "gates" || $2 != "pass"' | cut -f1,2 | sed 's/^/- check: /' || true
               gh api "repos/$REPO/pulls/$n/reviews" --jq ".[] | $trusted | \"- review (\\(.user.login), \\(.state)): \\(.body)\""
               gh api "repos/$REPO/pulls/$n/comments" --jq ".[] | $trusted | \"- comment (\\(.user.login)) \\(.path):\\(.line // .original_line): \\(.body)\""
               echo
